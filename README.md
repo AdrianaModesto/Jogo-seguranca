@@ -1,7 +1,7 @@
 
 # Jogo de Terror
 
-## 📖 Sobre o Projeto
+## Sobre o Projeto
 
 Este projeto é um jogo de terror inspirado na ideia de *Five Nights at Freddy's (FNAF)*, com uma proposta de gameplay assimétrica para dois jogadores.
 
