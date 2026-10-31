@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Câmeras</title>
+   <!-- Ligação com o arquivo CSS externo -->
+   <link rel="stylesheet" href="style.css">
+</head>
+<body> 
+    <div class="monitor-container">
+        <h1>Painel de Controle Principal</h1>
+        <p id="bicho_a">Bicho A = False</p>
+        
+        <div class="controle">
+            <button onclick="bichoatrue()">Ativar Bicho A</button>
+            <button onclick="bichoafalse()">Desativar Bicho A</button>
+        </div>
+
+        <h2>Selecione a Câmera:</h2>
+        <nav class="navegacao-cameras">
+            <a href="cam_cozinha.html">Camera Cozinha</a> | 
+            <a href="cam_entrada.html">Camera Entrada</a> | 
+            <a href="cam_escada.html">Camera Escada</a> | 
+            <a href="cam_quarto.html">Camera Quarto</a> |
+            <a href="cam_sala.html" >Camera Sala</a> |
+        </nav>
+    </div>
+
+    <!-- Ligação com o arquivo JavaScript externo -->
+    <script src="script.js"></script>
+</body>
+</html>
