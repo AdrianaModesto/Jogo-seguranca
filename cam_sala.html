@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitor - Cam Sala</title>
+   <!-- Ligação com o ficheiro CSS externo -->
+   <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- Container principal que centraliza o painel da câmara -->
+    <div class="monitor-container">
+
+    <!-- Cabeçalho da Câmera -->
+    <header>
+        <h1>CAM - Sala</h1>
+    </header>
+
+    <!-- Status dos Monstros -->
+    <section class="status-monstros">
+        <h2 id="bicho_a">Bicho A = Ausente</h2>
+
+        <div id="cor" class="camera-tela">  
+            Câmaras Operacionais
+        </div>
+
+        <h2>Bicho B = False</h2>
+        <h2>Bicho C = False</h2>
+    </section>
+
+    <!-- Botões de Ação -->
+    <div class="acoes">
+        <button onclick="bichoatrue()">Entrada</button>
+        <button onclick="bichoafalse()">Saída</button>
+    </div>
+
+    <hr>
+
+    <nav class="navegacao-cameras">
+        <p>Trocar de Câmera:</p>
+            <a href="cam_cozinha.html">Camera Cozinha</a> | 
+            <a href="cam_entrada.html">Camera Entrada</a> | 
+            <a href="cam_escada.html">Camera Escada</a> | 
+            <a href="cam_quarto.html">Camera Quarto</a> |
+            <a href="cam_sala.html" >Camera Sala</a> |
+    </nav>
+    </div>
+
+    <!-- Ligação com o ficheiro JavaScript externo -->
+    <script src="script.js"></script>
+
+</body>
+</html>
