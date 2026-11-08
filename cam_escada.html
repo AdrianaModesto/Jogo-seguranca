@@ -7,7 +7,7 @@
    <!-- Ligação com o ficheiro CSS externo -->
    <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body data-papel="vigilante" data-sala="Escada">
 
     <div class="monitor-container">
 
@@ -16,23 +16,18 @@
         <h1>CAM - Escada</h1>
     </header>
 
+    <p>Tempo restante: <strong id="tempo">00:00</strong></p>
+
     <!-- Status dos Monstros -->
     <section class="status-monstros">
-        <h2 id="bicho_a">Bicho A = Ausente</h2>
 
         <div id="cor" class="camera-tela">  
             Câmaras Operacionais
         </div>
 
-        <h2>Bicho B = False</h2>
-        <h2>Bicho C = False</h2>
-    </section>
+        <h2 id="monstro-status">Monstro = Ausente</h2>
 
-    <!-- Botões de Ação -->
-    <div class="acoes">
-        <button onclick="bichoatrue()">Entrada</button>
-        <button onclick="bichoafalse()">Saída</button>
-    </div>
+    </section>
 
     <hr>
 
@@ -47,7 +42,8 @@
     </div>
 
     <!-- Ligação com o ficheiro JavaScript externo -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="conexao.js"></script>
     <script src="script.js"></script>
-
 </body>
 </html>

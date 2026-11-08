@@ -7,6 +7,8 @@
    <!-- Ligação com o arquivo CSS externo -->
    <link rel="stylesheet" href="style.css">
     <!-- Ligação com o arquivo JavaScript externo -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="conexao.js"></script>
     <script src="script.js"></script>
 </head>
 <body> 
@@ -18,11 +20,11 @@
     <main>
         <section>
             <h2> Escolha sua Função:</h2>
-            <button onclick="window.location.href='cam_sala.html'"> 
+            <button onclick="entrarComo('survivor')"> 
                 Jogar como Vigilante
             </button>
 
-            <button onclick="window.location.href='painel_monstro.html'">
+            <button onclick="entrarComo('monster')">
                 Jogar como Monstro
             </button>
 
