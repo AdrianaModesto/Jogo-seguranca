@@ -255,10 +255,13 @@ const Jumpscare = (() => {
     buildOverlay();
     if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
 
-    // reinicia as animações caso já tenham rodado antes
-    const clone = overlay.cloneNode(true);
-    overlay.replaceWith(clone);
-    overlay = clone;
+  // recria o overlay para reiniciar as animações
+    if (overlay) {
+        overlay.remove();
+        overlay = null;
+    }
+
+    buildOverlay();
 
     overlay.classList.remove('hidden');
     overlay.classList.add('js-glitch');

@@ -285,12 +285,19 @@ function terminarEVoltarAoLobby(mensagem) {
 }
 
 
-function mostrarFim(partida, papel) {
+
+async function mostrarFim(partida, papel) {
     if (jogoEncerrado === true) {
         return;
     }
+
     jogoEncerrado = true;
     clearInterval(temporizador);
+
+    // Jumpscare aparece somente na tela do vigilante quando ele morre.
+    if (papel === 'survivor' && partida.finish_reason === 'killed') {
+        await Jumpscare.play();
+    }
 
     let venceu = false;
     if (partida.winner === papel) {
@@ -298,6 +305,7 @@ function mostrarFim(partida, papel) {
     }
 
     let motivo = 'Partida encerrada.';
+
     if (partida.finish_reason === 'killed') {
         if (papel === 'monster') {
             motivo = 'Você pulou na câmera do vigilante!';
@@ -313,14 +321,16 @@ function mostrarFim(partida, papel) {
     }
 
     let titulo = '💀 VOCÊ PERDEU!\n';
+
     if (venceu === true) {
         titulo = '🏆 VOCÊ VENCEU!\n';
     }
-    const mensagem = titulo + motivo;
 
+    const mensagem = titulo + motivo;
 
     terminarEVoltarAoLobby(mensagem);
 }
+
 
 // Verifica o andamento da partida e atualiza o relógio.
 async function conferirPartida(papel) {
