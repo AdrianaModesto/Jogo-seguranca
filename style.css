@@ -10,3 +10,15 @@ h1 {
     width: 100px;
     height: 100px;
 }
+
+
+/*Para ajustar o tamanho das imagens dos comodos*/
+#fundo-camera {
+    position: fixed;     
+    top: 0;
+    left: 0;
+    width: 100%;          
+    height: 100%;         
+    object-fit: cover;   
+    z-index: -1;         
+}

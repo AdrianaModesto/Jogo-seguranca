@@ -42,7 +42,7 @@ return {
 };
 }
 
-// Papel do jogado
+// Papel do jogador
 function irParaPagina(idDaPartida, idDoJogador, papel) {
     sessionStorage.setItem('match_id', idDaPartida);
     sessionStorage.setItem('player_id', idDoJogador);
@@ -141,7 +141,7 @@ async function entrarComo(papel) {
         let souOSegundoJogador = false;
 
         if (busca.data.length > 0) {
-            // Entrada segundo jogado
+            // Entrada segundo jogador
             souOSegundoJogador = true;
             idDaPartida = busca.data[0].id;
 
@@ -180,7 +180,7 @@ async function entrarComo(papel) {
             idDaPartida = novaPartida.data.id;
         }
 
-        // Para entrar na partida com o papel escolhdo
+        // Para entrar na partida com o papel escolhido
         const novoJogador = await banco
             .from('match_players')
             .insert({ match_id: idDaPartida, session_token: token, role: papel })
@@ -677,19 +677,32 @@ async function cicloDoVigilante() {
     }
 }
 
-// Mostra na tela se o monstro está ou não nesta câmera.
+// Mostra na tela se o monstro está ou não nesta câmera
+// Faz duas coisas: troca o texto do alerta e troca a IMAGEM de fundo da câmera
 function desenharCamera(monstroAqui) {
-    const textoStatus = document.getElementById('monstro-status');   
-    const caixa = document.getElementById('cor');                     
+    const caixa = document.getElementById('cor');            
+    const fundo = document.getElementById('fundo-camera');      
 
+    // 1) Alerta
     if (monstroAqui === true) {
-        textoStatus.textContent = 'Monstro = Presente';
-        caixa.textContent = '⚠️ MONSTRO DETECTADO! Troque de câmera!';
-        caixa.classList.add('alerta');       
+        caixa.textContent = '⚠️ MONSTRO DETECTADO!';
+        caixa.classList.add('alerta');      
     } else {
-        textoStatus.textContent = 'Monstro = Ausente';
         caixa.textContent = 'Câmaras Operacionais';
         caixa.classList.remove('alerta');   
+    }
+
+    // 2) Imagem de fundo: troca entre a imagem SEM o bicho e a imagem COM o bicho
+    if (fundo !== null) {                                  
+        let imagemNova = fundo.dataset.imgSemBicho;          
+        if (monstroAqui === true) {
+            imagemNova = fundo.dataset.imgComBicho;          
+        }
+
+        // Só troca se for diferente da que já está na tela (assim a imagem não pisca a cada segundo)
+        if (fundo.getAttribute('src') !== imagemNova) {
+            fundo.setAttribute('src', imagemNova);
+        }
     }
 }
 
