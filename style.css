@@ -121,7 +121,7 @@ body {
     overflow: hidden;
 }
 
-/* Imagem de fundo cobrindo a tela toda com um leve escurecimento */
+/* Imagem de fundo  */
 .fundo-jogo {
     position: absolute;
     top: 0;
@@ -130,7 +130,6 @@ body {
     height: 100%;
     object-fit: cover;
     z-index: -1;
-    filter: brightness(0.4); /* Deixa a imagem escura para destacar o texto */
 }
 
 /* Caixa centralizada do menu */
