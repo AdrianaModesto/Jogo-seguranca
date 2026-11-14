@@ -1,24 +1,187 @@
+/* Estilo visual monitor de segurança (CAM_...) */
 body {
-    background-color: gray;
-    color: white;
-}
-h1 {
-    font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
-}
-#cor {
-    background-color: yellow;
-    width: 100px;
-    height: 100px;
+    background-color: #050505;
+    color: #ff3333; /* Texto principal em vermelho  */
+    font-family: 'Impact', 'Arial Black', sans-serif; /* Fonte mais forte e marcante */
+    letter-spacing: 1px;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
 }
 
+.monitor-container {
+    width: 850px;
+    border: 4px solid #330000;
+    background-color: #000;
+    padding: 20px;
+    box-shadow: 0 0 30px rgba(255, 0, 0, 0.2);
+}
 
-/*Para ajustar o tamanho das imagens dos comodos*/
-#fundo-camera {
-    position: fixed;     
+/* Topo: Nome da Câmera e Aviso de Alerta */
+.topo-camera {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #330000;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+}
+
+.topo-camera h1 {
+    margin: 0;
+    font-size: 24px;
+    color: #ff1a1a;
+    letter-spacing: 3px;
+}
+
+/* Alerta piscando quando o monstro está próximo */
+#alerta-monstro {
+    background-color: #660000;
+    color: #ffffff;
+    padding: 6px 14px;
+    font-weight: bold;
+    font-size: 14px;
+    border: 2px solid #ff0000;
+    display: none; /* Fica escondido até o monstro chegar */
+    animation: piscar 0.8s infinite alternate;
+}
+
+@keyframes piscar {
+    from { opacity: 1; }
+    to { opacity: 0.3; }
+}
+
+/* Espaço principal da tela da câmera */
+.camera-tela {
+    width: 100%;
+    height: 420px;
+    background-color: #0a0a0a;
+    border: 2px solid #220000;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.camera-tela img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    position: absolute;
     top: 0;
     left: 0;
-    width: 100%;          
-    height: 100%;         
-    object-fit: cover;   
-    z-index: -1;         
+}
+
+/* Classes de controle de visibilidade das imagens */
+.escondida {
+    display: none;
+}
+
+.ativa {
+    display: block;
+}
+
+/* Painel com os dois botões de navegação lateral */
+.navegacao-cameras {
+    margin-top: 20px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.btn-navegacao {
+    background-color: #1a0000;
+    color: #ff3333;
+    border: 2px solid #550000;
+    padding: 10px 20px;
+    font-family: 'Impact', 'Arial Black', sans-serif;
+    font-size: 16px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: 0.2s;
+    letter-spacing: 1px;
+}
+
+.btn-navegacao:hover {
+    background-color: #ff0000;
+    color: #000000;
+    border-color: #ff3333;
+}
+/* Estilo do INDEX.HTML, aba inicial)
+body {
+    margin: 0;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: 'Impact', 'Arial Black', sans-serif;
+    background-color: #000;
+    overflow: hidden;
+}
+
+/* Imagem de fundo  */
+.fundo-jogo {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: -1;
+}
+
+/* Caixa centralizada do menu */
+.menu-container {
+    text-align: center;
+    background-color: rgba(0, 0, 0, 0.85);
+    border: 3px solid #550000;
+    padding: 40px;
+    box-shadow: 0 0 30px rgba(255, 0, 0, 0.4);
+    max-width: 600px;
+}
+
+.menu-container h1 {
+    color: #ff1a1a;
+    font-size: 32px;
+    letter-spacing: 2px;
+    margin-bottom: 30px;
+}
+
+/* Estilo do botão Sala de Espera */
+#btn-sala-espera {
+    background-color: #1a0000;
+    color: #ff3333;
+    border: 2px solid #ff0000;
+    padding: 15px 30px;
+    font-family: 'Impact', 'Arial Black', sans-serif;
+    font-size: 20px;
+    cursor: pointer;
+    transition: 0.2s;
+    letter-spacing: 1px;
+}
+
+#btn-sala-espera:hover {
+    background-color: #ff0000;
+    color: #000;
+    box-shadow: 0 0 15px #ff0000;
+}
+
+/* Controle de visibilidade da mensagem */
+.escondida {
+    display: none;
+}
+
+#mensagem-espera {
+    margin-top: 25px;
+    color: #ff3333;
+    font-size: 18px;
+    letter-spacing: 1px;
+    animation: piscar 1s infinite alternate;
+}
+
+@keyframes piscar {
+    from { opacity: 1; }
+    to { opacity: 0.4; }
 }

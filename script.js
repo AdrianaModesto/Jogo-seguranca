@@ -735,3 +735,10 @@ async function iniciarPagina() {
 }
 
 document.addEventListener('DOMContentLoaded', iniciarPagina);
+
+/* Codigo JAVASCRIPTN ADD POR EVELYN) */
+
+function entrarSalaEspera() {
+    const mensagem = document.getElementById("mensagem-espera");
+    mensagem.classList.remove("escondida");
+}

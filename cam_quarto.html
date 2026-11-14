@@ -4,52 +4,43 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Monitor - Cam Quarto</title>
-   <!-- Ligação com o ficheiro CSS externo -->
-   <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body data-papel="vigilante" data-sala="Quarto">
 
     <div class="monitor-container">
 
-    <!-- Câmera -->
-    <header>
-        <h1>CAM - Quarto</h1>
-    </header>
+        <!-- Câmera -->
+        <header class="topo-camera">
+            <h1>CAM - Quarto</h1>
+            <div id="alerta-monstro">⚠️ ALERTA: MONSTRO PRÓXIMO!</div>
+        </header>
 
-    <p>Tempo restante: <strong id="tempo">00:00</strong></p>
+        <!-- Relógio do tempo restante -->
+        <p>Tempo restante: <strong id="tempo">00:00</strong></p>
 
-    <!-- Status dos Monstros -->
-    <section class="status-monstros">
-  
-        <div id="cor" class="camera-tela">  
-            Câmaras Operacionais
+        <!-- Status e Tela da Câmera com as duas imagens -->
+        <section class="status-monstros">
+            <div id="cor" class="camera-tela">  
+                <img id="img-normal" src="img/quarto_normal.png" alt="" class="ativa">
+                <img id="img-monstro" src="img/quarto_monstro.png" alt="" class="escondida">
+            </div>
+
+            <h2 id="monstro-status">Monstro = Ausente</h2>
+        </section>
+
+        <!-- Botões de navegação -->
+        <div class="navegacao-cameras">
+            <a href="cam_sala.html" class="btn-navegacao">← Cam Sala</a>
+            <a href="cam_cozinha.html" class="btn-navegacao">Cam Cozinha →</a>
         </div>
 
-    <img id="fundo-camera" src="img/quarto-sem-bicho.png"
-     data-img-sem-bicho="img/quarto-sem-bicho.png"
-     data-img-com-bicho="img/quarto-com-bicho.png"
-     alt="Imagem da câmera Sala">
-
-    </section>
-
-
-    <hr>
-
-    <nav class="navegacao-cameras">
-        <p>Trocar de Câmera:</p>
-            <a href="cam_cozinha.html">Camera Cozinha</a> | 
-            <a href="cam_entrada.html">Camera Entrada</a> | 
-            <a href="cam_escada.html">Camera Escada</a> | 
-            <a href="cam_quarto.html">Camera Quarto</a> |
-            <a href="cam_sala.html" >Camera Sala</a> |
-    </nav>
     </div>
 
-    <!-- Ligação com o ficheiro JavaScript externo -->
+    <!-- Scripts de Conexão -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="conexao.js"></script>
     <script src="jumpscare.js"></script>
     <script src="script.js"></script>
-  
 </body>
 </html>

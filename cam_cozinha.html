@@ -4,24 +4,35 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Monitor - Cam Cozinha</title>
-   <!-- Ligação com o ficheiro CSS externo -->
-   <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body data-papel="vigilante" data-sala="Cozinha">
 
     <div class="monitor-container">
 
-    <!-- Câmera -->
-    <header>
-        <h1>CAM - Cozinha</h1>
-    </header>
+        <!-- Câmera  -->
+        <header class="topo-camera">
+            <h1>CAM - Cozinha</h1>
+            <div id="alerta-monstro">⚠️ ALERTA: MONSTRO PRÓXIMO!</div>
+        </header>
 
-    <p>Tempo restante: <strong id="tempo">00:00</strong></p>
+        <!-- Relógio do tempo restante -->
+        <p>Tempo restante: <strong id="tempo">00:00</strong></p>
 
-    <!-- Status dos Monstros -->
-    <section class="status-monstros">
-        <div id="cor" class="camera-tela">  
-            Câmaras Operacionais
+        <!-- Status e Tela da Câmera com as duas imagens -->
+        <section class="status-monstros">
+            <div id="cor" class="camera-tela">  
+                <img id="img-normal" src="img/cozinha_normal.png" alt="" class="ativa">
+                <img id="img-monstro" src="img/cozinha_monstro.png" alt="" class="escondida">
+            </div>
+
+            <h2 id="monstro-status">Monstro = Ausente</h2>
+        </section>
+
+        <!-- Botões de navegação -->
+        <div class="navegacao-cameras">
+            <a href="cam_quarto.html" class="btn-navegacao">← Cam Quarto</a>
+            <a href="cam_entrada.html" class="btn-navegacao">Cam Entrada →</a>
         </div>
     <img id="fundo-camera" src="img/cozinha-sem-bicho.png"
      data-img-sem-bicho="img/cozinha-sem-bicho.png"

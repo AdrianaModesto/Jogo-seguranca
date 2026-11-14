@@ -4,32 +4,33 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema de Câmeras</title>
+
    <!-- Ligação com o arquivo CSS externo -->
    <link rel="stylesheet" href="style.css">
+
     <!-- Ligação com o arquivo JavaScript externo -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="conexao.js"></script>
     <script src="script.js"></script>
+    
 </head>
 <body> 
 
-    <header>
-        <h1> Sistema de Controle de Segurança 🚨</h1>
-    </header>
+ <!-- Imagem de fundo da tela inicial -->
+   <img src="img/sala_normal.jpg" alt="" class="fundo-jogo">
 
-    <main>
-        <section>
-            <h2> Escolha sua Função:</h2>
-            <button onclick="entrarComo('survivor')"> 
-                Jogar como Vigilante
-            </button>
+    <div class="menu-container">
+        <h1>Sistema de Controle de Segurança </h1>
+        
+        <!-- Botão Sala de Espera -->
+        <button id="btn-sala-espera" onclick="entrarSalaEspera()">Sala de Espera</button>
 
-            <button onclick="entrarComo('monster')">
-                Jogar como Monstro
-            </button>
+        <!-- Mensagem escondida que aparece ao clicar -->
+        <div id="mensagem-espera" class="escondida">
+            Aguardando jogadores se conectar...
+        </div>
+    </div>
 
-        </section>
-    </main>
-    
+    <script src="script.js"></script>
 </body>
 </html>
