@@ -516,6 +516,9 @@ async function iniciarMonstro() {
     idPartida = jogo.idPartida;
     idJogador = jogo.idJogador;
 
+    prepararSons(['painel']);
+    tocarSom('painel');
+
     cameras = await carregarCameras();
 
     // Lê no banco se o monstro já estava ativo em alguma câmera (ex.: se atualizei a página)
@@ -940,14 +943,16 @@ function usarUltimoEstadoConhecido() {
 const ARQUIVOS_DE_SOM = {
     espera:   'sons/espera.mp3',
     ambiente: 'sons/ambiente.mp3',
-    monstro:  'sons/monstro.mp3'
+    monstro:  'sons/monstro.mp3',
+    painel:   'sons/painel.mp3'    
 };
 
 // Volume de cada som 
 const VOLUME_DOS_SONS = {
     espera:   0.5,
-    ambiente: 1,
+    ambiente: 0.7,
     monstro:  1,
+    painel:   0.6
 };
 
 const sonsCriados = {};          
