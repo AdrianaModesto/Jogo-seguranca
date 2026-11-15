@@ -171,6 +171,7 @@ function mostrarMensagemDeEspera(texto) {
 function reiniciarSalaDeEspera() {
     clearInterval(intervaloDaEspera);
     esperaIdPartida = null;
+    pararSons();
 
     const botao = document.getElementById('btn-sala-espera');
     if (botao !== null) {
@@ -186,6 +187,7 @@ function reiniciarSalaDeEspera() {
 function esperarOutroJogador(idDaPartida, idDoJogador, meuPapel) {
     esperaIdPartida = idDaPartida;
     mostrarMensagemDeEspera('Aguardando jogadores se conectar...');
+    tocarSom('espera');   // música da sala de espera
 
     clearInterval(intervaloDaEspera);
     intervaloDaEspera = setInterval(async function () {
@@ -425,6 +427,7 @@ async function mostrarFim(partida, papel) {
 
     jogoEncerrado = true;
     clearInterval(temporizador);
+    pararSons();   // o susto não toca por cima dos outros sons
 
     // Jumpscare aparece somente na tela do vigilante quando ele morre
     if (papel === 'survivor' && partida.finish_reason === 'killed' && typeof Jumpscare !== 'undefined') {
@@ -756,6 +759,7 @@ async function iniciarCamera() {
     }
 
     // Prepara a tela: imagens prontas e, se der, já mostra o estado certo (sem esperar o banco)
+    prepararSons(['ambiente', 'monstro']);
     prepararImagensDaCamera();
     usarUltimoEstadoConhecido();
 
@@ -895,6 +899,13 @@ function desenharCamera(monstroAqui) {
             
     // 5) Agora a tela já mostra o estado certo: o CSS pode revelar a imagem (evita o "pisca")
     document.body.classList.add('pronto');
+
+    // 6) Som: com o monstro na câmera toca o som de perigo; sem ele, o som ambiente
+    if (monstroAqui === true) {
+        tocarSom('monstro');
+    } else {
+        tocarSom('ambiente');
+    }
         }
     }
 }
@@ -925,6 +936,134 @@ function usarUltimoEstadoConhecido() {
         console.error(erro);
     }
 }
+
+//SONS---------------------------------------------------------------------------------
+
+const ARQUIVOS_DE_SOM = {
+    espera:   'sons/espera.mp3',
+    ambiente: 'sons/ambiente.mp3',
+    monstro:  'sons/monstro.mp3'
+};
+
+// Volume de cada som 
+const VOLUME_DOS_SONS = {
+    espera:   0.5,
+    ambiente: 0.4,
+    monstro:  0.8
+};
+
+const sonsCriados = {};          
+let somDesejado = null;         
+let esperandoInteracao = false;  
+
+// Devolve o áudio de um som, criando ele na primeira vez
+function obterSom(nome) {
+    if (sonsCriados[nome] === undefined) {
+        const audio = new Audio(ARQUIVOS_DE_SOM[nome]);
+        audio.loop = true;         
+        audio.preload = 'auto';     
+        audio.volume = VOLUME_DOS_SONS[nome];
+        sonsCriados[nome] = audio;
+    }
+    return sonsCriados[nome];
+}
+
+// Começa a carregar os sons antes de precisar deles (para tocar na hora)
+function prepararSons(nomes) {
+    for (let i = 0; i < nomes.length; i++) {
+        obterSom(nomes[i]);
+    }
+}
+
+// Pede para tocar um som (e parar os outros
+function tocarSom(nome) {
+    if (somDesejado === nome) {
+        return;
+    }
+    somDesejado = nome;
+    aplicarSons();
+}
+
+// Para todos os sons
+function pararSons() {
+    somDesejado = null;
+    aplicarSons();
+}
+
+function aplicarSons() {
+    for (const nome in sonsCriados) {
+        if (nome !== somDesejado) {
+            sonsCriados[nome].pause();
+        }
+    }
+    if (somDesejado === null) {
+        return;
+    }
+
+    const audio = obterSom(somDesejado);
+    restaurarPosicaoDoSom(somDesejado, audio);
+
+    const promessa = audio.play();
+    if (promessa !== undefined) {
+        promessa.catch(function (erro) {
+            // O navegador só deixa tocar som depois que a pessoa clica na página.
+  
+            if (erro.name === 'NotAllowedError') {
+                aguardarInteracaoParaSom();
+            } else {
+                console.warn('Não foi possível tocar o som (o arquivo existe na pasta "sons"?):', erro.message);
+            }
+        });
+    }
+}
+
+// Espera o primeiro clique, tecla ou toque na página e então tenta tocar de novo
+function aguardarInteracaoParaSom() {
+    if (esperandoInteracao === true) {
+        return;
+    }
+    esperandoInteracao = true;
+
+    const eventos = ['click', 'keydown', 'touchstart'];
+    function liberar() {
+        esperandoInteracao = false;
+        for (let i = 0; i < eventos.length; i++) {
+            document.removeEventListener(eventos[i], liberar);
+        }
+        aplicarSons();
+    }
+    for (let i = 0; i < eventos.length; i++) {
+        document.addEventListener(eventos[i], liberar);
+    }
+}
+
+// Para não "quebrar" o som, guarda em que ponto ele estava ao sair da página
+window.addEventListener('pagehide', function () {
+    if (somDesejado !== null && sonsCriados[somDesejado] !== undefined) {
+        sessionStorage.setItem('som_posicao', JSON.stringify({
+            nome: somDesejado,
+            tempo: sonsCriados[somDesejado].currentTime,
+            quando: Date.now()
+        }));
+    }
+});
+
+// e continua dali na página seguinte 
+function restaurarPosicaoDoSom(nome, audio) {
+    try {
+        const guardado = sessionStorage.getItem('som_posicao');
+        if (guardado === null) {
+            return;
+        }
+        sessionStorage.removeItem('som_posicao');   // usa uma vez só
+        const posicao = JSON.parse(guardado);
+        if (posicao.nome === nome && Date.now() - posicao.quando < 5000) {
+            audio.currentTime = posicao.tempo;
+        }
+    } catch (erro) {
+        console.error(erro);
+    }
+
 
 
 // inicio automatica da pagina----------------------------------------------------------

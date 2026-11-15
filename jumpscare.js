@@ -9,7 +9,7 @@
 const Jumpscare = (() => {
   const CONFIG = {
     imageSrc: 'jumpscare.jpg', // imagem do susto (se falhar ao carregar, usa o rosto desenhado em CSS)
-    soundSrc: null,       // ex.: 'audio/jumpscare.mp3' (se null, usa o grito sintetizado)
+    soundSrc: 'sons/jumpscare.mp3',       // ex.: 'audio/jumpscare.mp3' (se null, usa o grito sintetizado)
     durationMs: 2000,     // tempo total do susto
     vibrate: [200, 80, 300, 80, 400],
   };
