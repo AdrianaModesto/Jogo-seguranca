@@ -27,11 +27,14 @@ let vigilanteSala = null;
 let partidaEmAndamento = false;
 
 // Câmera do vigilante
-let minhaCamera = null;         
+let minhaCamera = null; 
+let cicloVigilanteOcupado = false;         
 
 // Sala de espera
 let intervaloDaEspera = null;   
 let esperaIdPartida = null;     
+
+const INTERVALO_VIGILANTE = 500;
 
 //IDENTIFICAÇÃO DO JOGADOR----------------------------------------------------------------
 
@@ -110,22 +113,33 @@ async function garantirSalasDasCameras() {
 
 // Busca no banco as câmeras e devolve uma lista na ordem de NOMES_CAMERAS
 async function carregarCameras() {
+    // Já buscou nesta aba? Usa a lista guardada: evita uma ida ao banco a cada troca de câmera
+    const guardado = sessionStorage.getItem('cameras_cache');
+    if (guardado !== null) {
+        const listaGuardada = JSON.parse(guardado);
+        if (listaGuardada.length === NOMES_CAMERAS.length) {
+            return listaGuardada;
+        }
+    }
+
     const resposta = await banco.from('rooms').select('id, name').in('name', NOMES_CAMERAS).order('id');
     if (resposta.error) throw resposta.error;
 
     const todas = resposta.data;
-    const cameras = [];
+    const lista = [];
 
-    // Organiza as câmeras de acordo com os nomes definidos
     for (let i = 0; i < NOMES_CAMERAS.length; i++) {
         for (let j = 0; j < todas.length; j++) {
             if (todas[j].name === NOMES_CAMERAS[i]) {
-                cameras.push(todas[j]);
+                lista.push(todas[j]);
                 break;
             }
         }
     }
-    return cameras;
+    if (lista.length === NOMES_CAMERAS.length) {
+        sessionStorage.setItem('cameras_cache', JSON.stringify(lista));
+    }
+    return lista;
 }
 
 // Localiza uma câmera pelo seu ID
@@ -196,7 +210,7 @@ async function entrarSalaEspera() {
         botao.disabled = true;   // evita clicar duas vezes
     }
     mostrarMensagemDeEspera('Procurando partida...');
-
+    sessionStorage.removeItem('cameras_cache'); 
     try {
         await garantirSalasDasCameras();
         const token = getToken();
@@ -392,6 +406,7 @@ function terminarEVoltarAoLobby(mensagem) {
     sessionStorage.removeItem('match_id');
     sessionStorage.removeItem('player_id');
     sessionStorage.removeItem('role');
+    sessionStorage.removeItem('cameras_cache');
     location.href = 'painel_modo.html';
 }
 
@@ -406,7 +421,7 @@ async function mostrarFim(partida, papel) {
     clearInterval(temporizador);
 
     // Jumpscare aparece somente na tela do vigilante quando ele morre
-    if (papel === 'survivor' && partida.finish_reason === 'killed') {
+    if (papel === 'survivor' && partida.finish_reason === 'killed' && typeof Jumpscare !== 'undefined') {
         await Jumpscare.play();
     }
 
@@ -721,6 +736,7 @@ async function iniciarCamera() {
         }, { once: true });   
     }
 
+    // Descobre qual câmera é esta página 
     cameras = await carregarCameras();
     const nomeDestaPagina = document.body.dataset.sala;
     for (let i = 0; i < cameras.length; i++) {
@@ -733,7 +749,21 @@ async function iniciarCamera() {
         return;
     }
 
-    // Grava no banco que o vigilante está olhando esta câmera
+    // Começa já a perguntar onde o monstro está, SEM esperar as gravações abaixo terminarem
+    const gravacao = gravarMinhaCamera();
+    cicloDoVigilante();
+    temporizador = setInterval(cicloDoVigilante, INTERVALO_VIGILANTE);
+
+    try {
+        await gravacao;
+    } catch (erro) {
+        clearInterval(temporizador);
+        throw erro;
+    }
+}
+
+// Grava no banco que o vigilante está olhando esta câmera e anota no histórico
+async function gravarMinhaCamera() {
     const resposta = await banco
         .from('match_players')
         .update({ current_room_id: minhaCamera.id, last_action_at: new Date().toISOString() })
@@ -745,36 +775,40 @@ async function iniciarCamera() {
             'permissão (RLS) no Supabase, ou este jogador não existe mais. Volte ao menu e entre de novo.');
     }
 
-    // Anota no histórico da partida
     await banco.from('match_events').insert({
         match_id: idPartida,
         player_id: idJogador,
         event_type: 'move',
         details: 'Vigilante olhando a câmera ' + minhaCamera.name
     });
-
-    cicloDoVigilante();
-    temporizador = setInterval(cicloDoVigilante, 1000);
 }
 
-// Repete a cada 1 segundo: confere a partida e pergunta ao banco onde o monstro está
+// confere a partida e pergunta ao banco onde o monstro está
 async function cicloDoVigilante() {
     if (jogoEncerrado === true) {
         return;
     }
+    if (cicloVigilanteOcupado === true) {
+        return;  
+    }
+    cicloVigilanteOcupado = true;
 
     try {
-        const partida = await conferirPartida('survivor');
+        const respostas = await Promise.all([
+            conferirPartida('survivor'),
+            banco
+                .from('match_players')
+                .select('current_room_id')
+                .eq('match_id', idPartida)
+                .eq('role', 'monster')
+                .maybeSingle()
+        ]);
+        const partida = respostas[0];
+        const resposta = respostas[1];
+
         if (partida === null) {
             return;
         }
-
-        const resposta = await banco
-            .from('match_players')
-            .select('current_room_id')
-            .eq('match_id', idPartida)
-            .eq('role', 'monster')
-            .maybeSingle();
         if (resposta.error) {
             console.error(resposta.error);
             return;
@@ -789,16 +823,17 @@ async function cicloDoVigilante() {
 
     } catch (erro) {
         console.error(erro);
+    } finally {
+        cicloVigilanteOcupado = false;
     }
 }
 
-// Mostra na tela se o monstro está ou não nesta câmera:
-// troca a imagem (normal <-> com monstro), liga/desliga o aviso e atualiza o texto.
+// Mostra na tela se o monstro está ou não nesta câmera
 function desenharCamera(monstroAqui) {
     const imagemNormal = document.getElementById('img-normal');      
-    const imagemMonstro = document.getElementById('img-monstro');   
+    const imagemMonstro = document.getElementById('img-monstro');    
     const alerta = document.getElementById('alerta-monstro');        
-    const textoStatus = document.getElementById('monstro-status');   
+    const textoStatus = document.getElementById('monstro-status');  
     const caixa = document.getElementById('cor');                   
 
     // 1) Imagens: a classe "ativa" mostra e a classe "escondida" esconde (definidas no CSS)
@@ -843,6 +878,7 @@ function desenharCamera(monstroAqui) {
         }
     }
 }
+
 
 // inicio automatica da pagina----------------------------------------------------------
 
