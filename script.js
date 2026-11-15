@@ -539,7 +539,7 @@ function desenharControlesMonstro() {
         '<button onclick="ativarMonstro()">Ativar</button> ' +
         '<button onclick="desativarMonstro()">Desativar</button></p>' +
         '<p id="estado-monstro"></p>' +
-       // '<p id="estado-vigilante"></p>' + 
+        '<p id="estado-vigilante"></p>' + 
         '<p><button id="btn-matar" onclick="matarVigilante()" disabled>Pular na câmera do vigilante</button></p>';
 }
 
