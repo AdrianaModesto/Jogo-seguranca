@@ -202,6 +202,8 @@ body {
     transition: all 0.2s ease-in-out;
     margin: 5px;
 }
+
+/* Efeito ao passar o mouse por cima dos botões ou do select */
 #controles-bichos button:hover,
 .controle button:hover,
 #controles-bichos select:hover {
