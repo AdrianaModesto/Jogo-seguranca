@@ -1,17 +1,39 @@
+
+//CONFIGURAÇÕES E VARIÁVEIS GERAIS-------------------------------------------------------------
+
 //Câmeras
 const NOMES_CAMERAS= ['Cozinha', 'Entrada', 'Escada', 'Quarto', 'Sala'];
 
 // Tempo para o vigilante poder fugir (trocar de camera) 
 const TEMPO_PARA_FUGIR= 5;
 
+// Minutos para esperar o 2º jogador as mais antigas que isso são abandonadas
+const MINUTOS_DE_ESPERA = 5;
+
 //Banco de dados
 const banco= supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-
+// Dados da partida atual
 let idPartida = null;
 let idJogador = null;
 let jogoEncerrado = false;
 let temporizador= null
+let cameras = [];  
+
+// Painel do monstro
+let monstroSala = null;         
+let monstroAtivadoEm = null;    
+let vigilanteSala = null;       
+let partidaEmAndamento = false;
+
+// Câmera do vigilante
+let minhaCamera = null;         
+
+// Sala de espera
+let intervaloDaEspera = null;   
+let esperaIdPartida = null;     
+
+//IDENTIFICAÇÃO DO JOGADOR----------------------------------------------------------------
 
 // Código único para identificar o jogador
 function getToken() {
@@ -23,7 +45,7 @@ function getToken() {
     return token;
 }
 
-// Recupera os dados da partida que foram salvos no navegador
+// lê os dados da partida que foram salvos no navegador
 function lerPartidaSalva() {
     const idPartidaSalvo = sessionStorage.getItem('match_id');
     const idJogadorSalvo = sessionStorage.getItem('player_id');
@@ -55,8 +77,7 @@ function irParaPagina(idDaPartida, idDoJogador, papel) {
     }
 }
 
-// Gerenciamento das câmeas no banco de dados----------------------------------------------
-
+// GERENCIAMENTO DAS CÂMERAS NO BANCO DE DADOS----------------------------------------------
 
 // Verifica quais câmeras já existem e cadastra as que estão faltando
 async function garantirSalasDasCameras() {
@@ -95,7 +116,7 @@ async function carregarCameras() {
     const todas = resposta.data;
     const cameras = [];
 
-    // Organiza as câmeras de acordo com os nomes definidos.
+    // Organiza as câmeras de acordo com os nomes definidos
     for (let i = 0; i < NOMES_CAMERAS.length; i++) {
         for (let j = 0; j < todas.length; j++) {
             if (todas[j].name === NOMES_CAMERAS[i]) {
@@ -107,7 +128,7 @@ async function carregarCameras() {
     return cameras;
 }
 
-// Localiza uma câmera pelo seu ID.
+// Localiza uma câmera pelo seu ID
 function acharCameraPorId(listaDeCameras, id) {
     for (let i = 0; i < listaDeCameras.length; i++) {
         if (listaDeCameras[i].id === id) {
@@ -117,101 +138,191 @@ function acharCameraPorId(listaDeCameras, id) {
     return null;
 }
 
-//Escolha de papel (monsto/vigilante----------------------------------------------------------------------
+//SALA DE ESPERA-------------------------------------------------------------------
 
-async function entrarComo(papel) {
-    try {
-        await garantirSalasDasCameras();   
-        const token = getToken();          
-
-        //  Procurar partida esperando
-        // SÓ paa partida criada nos últimos 3 minutos (as mais antigas foram abandonadas).
-        const tresMinutosAtras = new Date(Date.now() - 3 * 60 * 1000).toISOString();
-
-        const busca = await banco
-            .from('matches')                          
-            .select('id')                              
-            .eq('status', 'waiting_players')           
-            .gte('created_at', tresMinutosAtras)       
-            .order('id', { ascending: true })         
-            .limit(1);                               
-        if (busca.error) throw busca.error;
-
-        let idDaPartida = null;
-        let souOSegundoJogador = false;
-
-        if (busca.data.length > 0) {
-            // Entrada segundo jogador
-            souOSegundoJogador = true;
-            idDaPartida = busca.data[0].id;
-
-
-            const euMesmo = await banco
-                .from('match_players')
-                .select('id, role')
-                .eq('match_id', idDaPartida)
-                .eq('session_token', token)
-                .maybeSingle();
-
-            if (euMesmo.data !== null) {
-                irParaPagina(idDaPartida, euMesmo.data.id, euMesmo.data.role);
-                return;
-}
-        } else {
-            // Criar uma partida nova 
-
-            const config = await banco
-                .from('game_configs')
-                .select('value_numeric')
-                .eq('key', 'match_duration_seconds')
-                .maybeSingle();
-
-            let duracao = 300;
-            if (config.data !== null && config.data.value_numeric) {
-                duracao = config.data.value_numeric;
-            }
-
-            const novaPartida = await banco
-                .from('matches')
-                .insert({ duration_limit_seconds: duracao })
-                .select('id')
-                .single();
-            if (novaPartida.error) throw novaPartida.error;
-            idDaPartida = novaPartida.data.id;
-        }
-
-        // Para entrar na partida com o papel escolhido
-        const novoJogador = await banco
-            .from('match_players')
-            .insert({ match_id: idDaPartida, session_token: token, role: papel })
-            .select('id')
-            .single();
-
-        if (novoJogador.error) {
-            if (novoJogador.error.code === '23505') {
-                throw new Error('Esse papel já foi escolhido por outro jogador. Escolha o outro papel.');
-            }
-            throw novoJogador.error;
-        }
-
-        // Segundo jogador para inicar partida 
-        if (souOSegundoJogador === true) {
-            const inicio = await banco
-                .from('matches')
-                .update({ status: 'in_progress', started_at: new Date().toISOString() })
-                .eq('id', idDaPartida);
-            if (inicio.error) throw inicio.error;
-        }
-
-        // Inicia- abindo página do papel escolhido
-        irParaPagina(idDaPartida, novoJogador.data.id, papel);
-
-    } catch (erro) {
-
-        console.error(erro);
-        alert(erro.message);
+// Escreve um texto na mensagem da sala de espera e mostra ela na tela
+function mostrarMensagemDeEspera(texto) {
+    const mensagem = document.getElementById('mensagem-espera');
+    if (mensagem !== null) {
+        mensagem.textContent = texto;
+        mensagem.classList.remove('escondida');
     }
 }
+
+// Volta a sala de espera ao começo: botão liberado e mensagem escondida
+function reiniciarSalaDeEspera() {
+    clearInterval(intervaloDaEspera);
+    esperaIdPartida = null;
+
+    const botao = document.getElementById('btn-sala-espera');
+    if (botao !== null) {
+        botao.disabled = false;
+    }
+    const mensagem = document.getElementById('mensagem-espera');
+    if (mensagem !== null) {
+        mensagem.classList.add('escondida');
+    }
+}
+
+// Fica esperando o outro jogador: a cada 2 segundos pergunta ao banco se a partida já começou
+function esperarOutroJogador(idDaPartida, idDoJogador, meuPapel) {
+    esperaIdPartida = idDaPartida;
+    mostrarMensagemDeEspera('Aguardando jogadores se conectar...');
+
+    clearInterval(intervaloDaEspera);
+    intervaloDaEspera = setInterval(async function () {
+        const resposta = await banco.from('matches').select('status').eq('id', idDaPartida).single();
+        if (resposta.error) {
+            console.error(resposta.error);
+            return;
+        }
+
+        if (resposta.data.status === 'in_progress') {
+            // O outro jogador chegou: vai para a página do meu papel
+            clearInterval(intervaloDaEspera);
+            esperaIdPartida = null;
+            irParaPagina(idDaPartida, idDoJogador, meuPapel);
+        } else if (resposta.data.status === 'finished') {
+            alert('A partida foi cancelada. Tente entrar de novo.');
+            reiniciarSalaDeEspera();
+        }
+    }, 2000);
+}
+
+// Chamada pelo botão "Sala de Espera"
+async function entrarSalaEspera() {
+    const botao = document.getElementById('btn-sala-espera');
+    if (botao !== null) {
+        botao.disabled = true;   // evita clicar duas vezes
+    }
+    mostrarMensagemDeEspera('Procurando partida...');
+
+    try {
+        await garantirSalasDasCameras();
+        const token = getToken();
+
+        // Até 3 tentativas: se dois jogadores entrarem no mesmo instante, um deles tenta de novo
+        for (let tentativa = 0; tentativa < 3; tentativa++) {
+
+            // ----- 1: procurar uma partida esperando -----
+            const limite = new Date(Date.now() - MINUTOS_DE_ESPERA * 60 * 1000).toISOString();
+            const busca = await banco
+                .from('matches')
+                .select('id')
+                .eq('status', 'waiting_players')
+                .gte('created_at', limite)
+                .order('id', { ascending: true })
+                .limit(1);
+            if (busca.error) throw busca.error;
+
+            let idDaPartida = null;
+            let meuPapel = '';
+            let souOSegundoJogador = false;
+
+            if (busca.data.length > 0) {
+                // Achei uma partida esperando
+                idDaPartida = busca.data[0].id;
+
+                const jogadores = await banco
+                    .from('match_players')
+                    .select('id, role, session_token')
+                    .eq('match_id', idDaPartida);
+                if (jogadores.error) throw jogadores.error;
+
+                // Se um deles sou EU (atualizei a página), volto a esperar
+                for (let i = 0; i < jogadores.data.length; i++) {
+                    if (jogadores.data[i].session_token === token) {
+                        esperarOutroJogador(idDaPartida, jogadores.data[i].id, jogadores.data[i].role);
+                        return;
+                    }
+                }
+
+                // Fico com o papel que SOBROU: se o outro é monstro, eu sou vigilante (e vice-versa)
+                meuPapel = 'monster';
+                if (jogadores.data.length > 0 && jogadores.data[0].role === 'monster') {
+                    meuPapel = 'survivor';
+                }
+                souOSegundoJogador = true;
+
+            } else {
+                // Não achei: crio uma partida nova
+                const config = await banco
+                    .from('game_configs')
+                    .select('value_numeric')
+                    .eq('key', 'match_duration_seconds')
+                    .maybeSingle();
+
+                let duracao = 300;
+                if (config.data !== null && config.data.value_numeric) {
+                    duracao = config.data.value_numeric;
+                }
+
+                const novaPartida = await banco
+                    .from('matches')
+                    .insert({ duration_limit_seconds: duracao })
+                    .select('id')
+                    .single();
+                if (novaPartida.error) throw novaPartida.error;
+                idDaPartida = novaPartida.data.id;
+
+                // Papel SORTEADO
+                meuPapel = 'survivor';
+                if (Math.random() < 0.5) {
+                    meuPapel = 'monster';
+                }
+            }
+
+            // ----- 2: entrar na partida com o meu papel -----
+            const novoJogador = await banco
+                .from('match_players')
+                .insert({ match_id: idDaPartida, session_token: token, role: meuPapel })
+                .select('id')
+                .single();
+
+            if (novoJogador.error) {
+                if (novoJogador.error.code === '23505') {
+                    continue;   
+                }
+                throw novoJogador.error;
+            }
+
+            // -----3: começar ou esperar -----
+            if (souOSegundoJogador === true) {
+                // Sou o 2º jogador: a partida começa agora
+                const inicio = await banco
+                    .from('matches')
+                    .update({ status: 'in_progress', started_at: new Date().toISOString() })
+                    .eq('id', idDaPartida);
+                if (inicio.error) throw inicio.error;
+
+                irParaPagina(idDaPartida, novoJogador.data.id, meuPapel);
+            } else {
+                // Criei a partida: espero o outro jogador chegar
+                esperarOutroJogador(idDaPartida, novoJogador.data.id, meuPapel);
+            }
+            return;
+        }
+
+        throw new Error('Não foi possível entrar na partida agora. Tente de novo.');
+
+    } catch (erro) {
+        console.error(erro);
+        alert(erro.message);
+        reiniciarSalaDeEspera();
+    }
+}
+
+// Se eu criei uma partida e fechei a página antes de alguém entrar, cancela essa partida.
+window.addEventListener('pagehide', function () {
+    if (esperaIdPartida !== null) {
+        banco
+            .from('matches')
+            .update({ status: 'finished', winner: 'none', finish_reason: 'canceled', ended_at: new Date().toISOString() })
+            .eq('id', esperaIdPartida)
+            .eq('status', 'waiting_players')
+            .then(function () {});  
+    }
+});
 
 // Relogio e fim de jogo---------------------------------------------
 
@@ -250,7 +361,7 @@ function atualizarRelogio(partida) {
     }
 }
 
-// Busca os dados da partida atual no banco de dados.
+// Busca os dados da partida atual no banco de dados
 async function buscarPartida() {
     const resposta = await banco.from('matches').select('*').eq('id', idPartida).single();
     if (resposta.error) {
@@ -285,7 +396,7 @@ function terminarEVoltarAoLobby(mensagem) {
 }
 
 
-
+// Tela de fim de jogo (vitória ou derrota)
 async function mostrarFim(partida, papel) {
     if (jogoEncerrado === true) {
         return;
@@ -294,7 +405,7 @@ async function mostrarFim(partida, papel) {
     jogoEncerrado = true;
     clearInterval(temporizador);
 
-    // Jumpscare aparece somente na tela do vigilante quando ele morre.
+    // Jumpscare aparece somente na tela do vigilante quando ele morre
     if (papel === 'survivor' && partida.finish_reason === 'killed') {
         await Jumpscare.play();
     }
@@ -363,14 +474,7 @@ async function conferirPartida(papel) {
     return partida;
 }
 
-//MONSTRO (painel  contrrols------------------------------------
-
-// Variáveis utilizadas no painel do monstro.
-let cameras = [];
-let monstroSala = null;
-let monstroAtivadoEm = null;
-let vigilanteSala = null;
-let partidaEmAndamento = false;
+//MONSTRO (painel)---------------------------------------------------
 
 // Entra como monsto
 async function iniciarMonstro() {
@@ -496,13 +600,13 @@ async function cicloDoMonstro() {
     }
 }
 
-// Ativa o monstro na câmera selecionada.
+// Ativa o monstro na câmera selecionada
 function ativarMonstro() {
     const salaEscolhida = Number(document.getElementById('sala-bicho').value);
     moverMonstro(salaEscolhida);
 }
 
-// Desativa o monstro da câmera atual.
+// Desativa o monstro da câmera atual
 function desativarMonstro() {
     moverMonstro(null);
 }
@@ -596,11 +700,9 @@ async function matarVigilante() {
     }
 }
 
-//Vigilante visao
+//VIGILANTE------------------------------------------------------------ 
 
-let minhaCamera = null;   
-
-// Prepara a página de câmera. Roda uma vez, quando a página abre.
+// Roda uma vez quando a página de câmera abre
 async function iniciarCamera() {
     // Confere se eu realmente entrei como vigilante
     const jogo = lerPartidaSalva();
@@ -611,7 +713,14 @@ async function iniciarCamera() {
     idPartida = jogo.idPartida;
     idJogador = jogo.idJogador;
 
-    // Descobre qual câmera é esta página
+    // Prepara o susto 
+    if (typeof Jumpscare !== 'undefined') {
+        Jumpscare.prepare();
+        document.addEventListener('click', function () {
+            Jumpscare.prepare();
+        }, { once: true });   
+    }
+
     cameras = await carregarCameras();
     const nomeDestaPagina = document.body.dataset.sala;
     for (let i = 0; i < cameras.length; i++) {
@@ -624,7 +733,7 @@ async function iniciarCamera() {
         return;
     }
 
-    // Grava no banco que o vigilante está olhando esta câmera.
+    // Grava no banco que o vigilante está olhando esta câmera
     const resposta = await banco
         .from('match_players')
         .update({ current_room_id: minhaCamera.id, last_action_at: new Date().toISOString() })
@@ -633,10 +742,10 @@ async function iniciarCamera() {
     if (resposta.error) throw resposta.error;
     if (resposta.data.length === 0) {
         throw new Error('O banco NÃO gravou a câmera do vigilante (0 linhas alteradas). Pode ser bloqueio de ' +
-            'permissão (RLS) no Supabase, ou este jogador não existe mais. Volte ao lobby e entre de novo.');
+            'permissão (RLS) no Supabase, ou este jogador não existe mais. Volte ao menu e entre de novo.');
     }
 
-    // Anota no histórico da partida.
+    // Anota no histórico da partida
     await banco.from('match_events').insert({
         match_id: idPartida,
         player_id: idJogador,
@@ -644,25 +753,22 @@ async function iniciarCamera() {
         details: 'Vigilante olhando a câmera ' + minhaCamera.name
     });
 
-
     cicloDoVigilante();
     temporizador = setInterval(cicloDoVigilante, 1000);
 }
 
-//pergunta ao banco onde o monstro está.
+// Repete a cada 1 segundo: confere a partida e pergunta ao banco onde o monstro está
 async function cicloDoVigilante() {
     if (jogoEncerrado === true) {
         return;
     }
 
     try {
-        // Confere se a partida acabou, atualiza o relógio e vê se o tempo acabou.
         const partida = await conferirPartida('survivor');
         if (partida === null) {
             return;
         }
 
-        // Pergunta ao banco: em qual câmera o monstro está?
         const resposta = await banco
             .from('match_players')
             .select('current_room_id')
@@ -681,42 +787,64 @@ async function cicloDoVigilante() {
         }
         desenharCamera(monstroAqui);
 
-
     } catch (erro) {
         console.error(erro);
     }
 }
 
-// Mostra na tela se o monstro está ou não nesta câmera
-// Faz duas coisas: troca o texto do alerta e troca a IMAGEM de fundo da câmera
+// Mostra na tela se o monstro está ou não nesta câmera:
+// troca a imagem (normal <-> com monstro), liga/desliga o aviso e atualiza o texto.
 function desenharCamera(monstroAqui) {
-    const caixa = document.getElementById('cor');            
-    const fundo = document.getElementById('fundo-camera');      
+    const imagemNormal = document.getElementById('img-normal');      
+    const imagemMonstro = document.getElementById('img-monstro');   
+    const alerta = document.getElementById('alerta-monstro');        
+    const textoStatus = document.getElementById('monstro-status');   
+    const caixa = document.getElementById('cor');                   
 
-    // 1) Alerta
-    if (monstroAqui === true) {
-        caixa.textContent = '⚠️ MONSTRO DETECTADO!';
-        caixa.classList.add('alerta');      
-    } else {
-        caixa.textContent = 'Câmaras Operacionais';
-        caixa.classList.remove('alerta');   
+    // 1) Imagens: a classe "ativa" mostra e a classe "escondida" esconde (definidas no CSS)
+    if (imagemNormal !== null && imagemMonstro !== null) {
+        if (monstroAqui === true) {
+            imagemNormal.classList.remove('ativa');
+            imagemNormal.classList.add('escondida');
+            imagemMonstro.classList.remove('escondida');
+            imagemMonstro.classList.add('ativa');
+        } else {
+            imagemMonstro.classList.remove('ativa');
+            imagemMonstro.classList.add('escondida');
+            imagemNormal.classList.remove('escondida');
+            imagemNormal.classList.add('ativa');
+        }
     }
 
-    // 2) Imagem de fundo: troca entre a imagem SEM o bicho e a imagem COM o bicho
-    if (fundo !== null) {                                  
-        let imagemNova = fundo.dataset.imgSemBicho;          
+    // 2) Aviso no topo
+    if (alerta !== null) {
         if (monstroAqui === true) {
-            imagemNova = fundo.dataset.imgComBicho;          
+            alerta.style.display = 'block';
+        } else {
+            alerta.style.display = 'none';
         }
+    }
 
-        // Só troca se for diferente da que já está na tela (assim a imagem não pisca a cada segundo)
-        if (fundo.getAttribute('src') !== imagemNova) {
-            fundo.setAttribute('src', imagemNova);
+    // 3) Texto de status
+    if (textoStatus !== null) {
+        if (monstroAqui === true) {
+            textoStatus.textContent = 'Monstro = Presente';
+        } else {
+            textoStatus.textContent = 'Monstro = Ausente';
+        }
+    }
+
+    // 4) Classe "alerta" na tela da câmera (dá para estilizar no CSS)
+    if (caixa !== null) {
+        if (monstroAqui === true) {
+            caixa.classList.add('alerta');
+        } else {
+            caixa.classList.remove('alerta');
         }
     }
 }
 
-// inicio automatica da pagina
+// inicio automatica da pagina----------------------------------------------------------
 
 async function iniciarPagina() {
     const papelDaPagina = document.body.dataset.papel;   
@@ -736,9 +864,9 @@ async function iniciarPagina() {
 
 document.addEventListener('DOMContentLoaded', iniciarPagina);
 
-/* Codigo JAVASCRIPTN ADD POR EVELYN) */
+/* Codigo JAVASCRIPTN ADD POR EVELYN) 
 
 function entrarSalaEspera() {
     const mensagem = document.getElementById("mensagem-espera");
     mensagem.classList.remove("escondida");
-}
+}*/
