@@ -1,11 +1,10 @@
-
 //CONFIGURAÇÕES E VARIÁVEIS GERAIS-------------------------------------------------------------
 
 //Câmeras
 const NOMES_CAMERAS= ['Cozinha', 'Entrada', 'Escada', 'Quarto', 'Sala'];
 
 // Tempo para o vigilante poder fugir (trocar de camera) 
-const TEMPO_PARA_FUGIR= 5;
+const TEMPO_PARA_FUGIR= 0;
 
 // Minutos para esperar o 2º jogador as mais antigas que isso são abandonadas
 const MINUTOS_DE_ESPERA = 5;
@@ -35,7 +34,7 @@ let intervaloDaEspera = null;
 let esperaIdPartida = null;     
 
 //A câmera do vigilante pergunta ao banco se o monstro apareceu
-const INTERVALO_VIGILANTE = 500;
+const INTERVALO_VIGILANTE = 200;
 
 // Tempo máximo (em milissegundos) que o jogo espera o susto terminar antes de mostrar o resultado
 const TEMPO_MAXIMO_DO_SUSTO = 8000;
@@ -183,11 +182,18 @@ function reiniciarSalaDeEspera() {
     }
 }
 
+
 // Fica esperando o outro jogador: a cada 2 segundos pergunta ao banco se a partida já começou
 function esperarOutroJogador(idDaPartida, idDoJogador, meuPapel) {
     esperaIdPartida = idDaPartida;
     mostrarMensagemDeEspera('Aguardando jogadores se conectar...');
-    tocarSom('espera');   // música da sala de espera
+    
+    // Tenta tocar a música de espera de forma segura caso o navegador bloqueie o autoplay inicial
+    try {
+        tocarSom('espera');   // música da sala de espera
+    } catch (e) {
+        console.warn('Aguardando interação para tocar o som de espera.', e);
+    }
 
     clearInterval(intervaloDaEspera);
     intervaloDaEspera = setInterval(async function () {
@@ -208,12 +214,12 @@ function esperarOutroJogador(idDaPartida, idDoJogador, meuPapel) {
         }
     }, 2000);
 }
-
 // Chamada pelo botão "Sala de Espera"
 async function entrarSalaEspera() {
     const botao = document.getElementById('btn-sala-espera');
     if (botao !== null) {
         botao.disabled = true;   // evita clicar duas vezes
+        tocarSom('espera');   // tem que ser no clique, antes de qualquer await
     }
     mostrarMensagemDeEspera('Procurando partida...');
     sessionStorage.removeItem('cameras_cache');
@@ -549,7 +555,6 @@ function desenharControlesMonstro() {
 // Atualiza as informações dos jogadores e o botão de ataque.
 function atualizarTelaDoMonstro() {
     const cameraDoMonstro = acharCameraPorId(cameras, monstroSala);
-    const cameraDoVigilante = acharCameraPorId(cameras, vigilanteSala);
 
     // Mostra em qual câmera o monstro está.
     if (cameraDoMonstro !== null) {
@@ -558,20 +563,10 @@ function atualizarTelaDoMonstro() {
         document.getElementById('estado-monstro').textContent = 'Monstro = Desativado';
     }
 
-    // Mostra qual câmera o vigilante está observando.
-    if (cameraDoVigilante !== null) {
-        document.getElementById('estado-vigilante').textContent = 'Vigilante = olhando a câmera ' + cameraDoVigilante.name;
-    } else {
-        document.getElementById('estado-vigilante').textContent = 'Vigilante = ainda não escolheu uma câmera';
-    }
+    // O status do vigilante foi completamente ocultado do painel do monstro.
 
-    // Verifica se os dois jogadores estão na mesma câmera.
-    let mesmaCamera = false;
-    if (monstroSala !== null && monstroSala === vigilanteSala) {
-        mesmaCamera = true;
-    }
-
-    // Verifica se o tempo de espera do monstro já passou.
+    // Como o monstro não sabe onde o vigilante está, a condição para pular 
+    // passa a exigir apenas que o monstro esteja ativo e o tempo de espera tenha passado.s
     let esperouOTempo = false;
     if (monstroAtivadoEm !== null) {
         const milissegundosPassados = Date.now() - monstroAtivadoEm;
@@ -580,42 +575,30 @@ function atualizarTelaDoMonstro() {
         }
     }
 
-    // Libera o ataque somente quando todas as condições forem atendidas.
     const botaoPular = document.getElementById('btn-matar');
-    if (partidaEmAndamento === true && mesmaCamera === true && esperouOTempo === true) {
+    if (partidaEmAndamento === true && monstroSala !== null && esperouOTempo === true) {
         botaoPular.disabled = false;
     } else {
         botaoPular.disabled = true;
     }
 }
 
-// Verifica o estado da partida e a posição do vigilante.
+// Verifica o estado da partida sem rastrear a posição do vigilante
 async function cicloDoMonstro() {
     if (jogoEncerrado === true) {
         return;
     }
 
     try {
-        // Atualiza as informações da partida.
         const partida = await conferirPartida('monster');
         if (partida === null) {
             return;
         }
         partidaEmAndamento = (partida.status === 'in_progress');
 
-        // Busca no banco a câmera escolhida pelo vigilante.
-        const resposta = await banco
-            .from('match_players')
-            .select('current_room_id')
-            .eq('match_id', idPartida)
-            .eq('role', 'survivor')
-            .maybeSingle();
-
-        if (resposta.data === null) {
-            vigilanteSala = null;
-        } else {
-            vigilanteSala = resposta.data.current_room_id;
-        }
+        // O monstro NÃO descobre onde o vigilante está. Deixamos vigilanteSala como null 
+        // para que o monstro precise adivinhar a câmera por tentativa e erro ou áudio.
+        vigilanteSala = null;
 
         atualizarTelaDoMonstro();
 
@@ -699,10 +682,16 @@ async function matarVigilante() {
             vigilanteAindaLa = true;
         }
 
-        if (vigilanteAindaLa === false) {
-            alert('O vigilante saiu dessa câmera. Ele fugiu!');
-            return;
-        }
+       // não espera o histórico
+banco.from('match_events').insert({
+    match_id: idPartida,
+    player_id: idJogador,
+    event_type: 'kill_attempt',
+    details: 'Monstro pulou na câmera do vigilante.'
+});
+
+await terminarPartida('monster', 'killed');
+mostrarFim({ status: 'finished', winner: 'monster', finish_reason: 'killed' }, 'monster');
 
         // Registra o ataque no histórico da partida.
         await banco.from('match_events').insert({
@@ -736,6 +725,16 @@ async function iniciarCamera() {
     }
     idPartida = jogo.idPartida;
     idJogador = jogo.idJogador;
+
+    banco.channel('partida-' + idPartida)
+    .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'matches', filter: 'id=eq.' + idPartida },
+        function (payload) {
+            if (payload.new.status === 'finished') {
+                mostrarFim(payload.new, 'survivor');
+            }
+        })
+    .subscribe();
 
     // Prepara o susto 
     if (typeof Jumpscare !== 'undefined') {
