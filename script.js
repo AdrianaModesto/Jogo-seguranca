@@ -34,7 +34,11 @@ let cicloVigilanteOcupado = false;
 let intervaloDaEspera = null;   
 let esperaIdPartida = null;     
 
+//A câmera do vigilante pergunta ao banco se o monstro apareceu
 const INTERVALO_VIGILANTE = 500;
+
+// Tempo máximo (em milissegundos) que o jogo espera o susto terminar antes de mostrar o resultado
+const TEMPO_MAXIMO_DO_SUSTO = 8000;
 
 //IDENTIFICAÇÃO DO JOGADOR----------------------------------------------------------------
 
@@ -210,7 +214,8 @@ async function entrarSalaEspera() {
         botao.disabled = true;   // evita clicar duas vezes
     }
     mostrarMensagemDeEspera('Procurando partida...');
-    sessionStorage.removeItem('cameras_cache'); 
+    sessionStorage.removeItem('cameras_cache');
+    sessionStorage.removeItem('monstro_visto');
     try {
         await garantirSalasDasCameras();
         const token = getToken();
@@ -407,6 +412,7 @@ function terminarEVoltarAoLobby(mensagem) {
     sessionStorage.removeItem('player_id');
     sessionStorage.removeItem('role');
     sessionStorage.removeItem('cameras_cache');
+    sessionStorage.removeItem('monstro_visto');
     location.href = 'painel_modo.html';
 }
 
@@ -749,6 +755,10 @@ async function iniciarCamera() {
         return;
     }
 
+    // Prepara a tela: imagens prontas e, se der, já mostra o estado certo (sem esperar o banco)
+    prepararImagensDaCamera();
+    usarUltimoEstadoConhecido();
+
     // Começa já a perguntar onde o monstro está, SEM esperar as gravações abaixo terminarem
     const gravacao = gravarMinhaCamera();
     cicloDoVigilante();
@@ -820,6 +830,12 @@ async function cicloDoVigilante() {
             monstroAqui = true;
         }
         desenharCamera(monstroAqui);
+        // Guarda onde o monstro estava: a próxima câmera que abrir usa isso para não "piscar"
+        let salaDoMonstro = null;
+        if (resposta.data !== null) {
+            salaDoMonstro = resposta.data.current_room_id;
+        }
+        sessionStorage.setItem('monstro_visto', JSON.stringify({ sala: salaDoMonstro, quando: Date.now() }));
 
     } catch (erro) {
         console.error(erro);
@@ -875,7 +891,38 @@ function desenharCamera(monstroAqui) {
             caixa.classList.add('alerta');
         } else {
             caixa.classList.remove('alerta');
+
+            
+    // 5) Agora a tela já mostra o estado certo: o CSS pode revelar a imagem (evita o "pisca")
+    document.body.classList.add('pronto');
         }
+    }
+}
+
+// Deixa as duas imagens da câmera prontas, para a troca entre elas ser instantânea
+function prepararImagensDaCamera() {
+    const ids = ['img-normal', 'img-monstro'];
+    for (let i = 0; i < ids.length; i++) {
+        const imagem = document.getElementById(ids[i]);
+        if (imagem !== null && typeof imagem.decode === 'function') {
+            imagem.decode().catch(function () {});  
+        }
+    }
+}
+
+// A imagem certa já aparece na hora, sem esperar a resposta do banco
+function usarUltimoEstadoConhecido() {
+    try {
+        const guardado = sessionStorage.getItem('monstro_visto');
+        if (guardado === null) {
+            return;
+        }
+        const visto = JSON.parse(guardado);
+        if (Date.now() - visto.quando < 3000) {
+            desenharCamera(visto.sala === minhaCamera.id);
+        }
+    } catch (erro) {
+        console.error(erro);
     }
 }
 
