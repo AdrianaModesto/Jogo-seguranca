@@ -542,7 +542,7 @@ function desenharControlesMonstro() {
         '<button onclick="ativarMonstro()">Ativar</button> ' +
         '<button onclick="desativarMonstro()">Desativar</button></p>' +
         '<p id="estado-monstro"></p>' +
-        '<p id="estado-vigilante"></p>' +
+       // '<p id="estado-vigilante"></p>' + 
         '<p><button id="btn-matar" onclick="matarVigilante()" disabled>Pular na câmera do vigilante</button></p>';
 }
 
@@ -1063,6 +1063,7 @@ function restaurarPosicaoDoSom(nome, audio) {
     } catch (erro) {
         console.error(erro);
     }
+    }
 
 
 
@@ -1086,9 +1087,9 @@ async function iniciarPagina() {
 
 document.addEventListener('DOMContentLoaded', iniciarPagina);
 
-/* Codigo JAVASCRIPTN ADD POR EVELYN) 
+//Codigo JAVASCRIPTN ADD POR EVELYN) 
 
-function entrarSalaEspera() {
-    const mensagem = document.getElementById("mensagem-espera");
-    mensagem.classList.remove("escondida");
-}*/
+//function entrarSalaEspera() {
+ //   const mensagem = document.getElementById("mensagem-espera");
+ //   mensagem.classList.remove("escondida");
+//}
