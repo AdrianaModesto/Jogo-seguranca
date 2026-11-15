@@ -542,7 +542,7 @@ function desenharControlesMonstro() {
         '<button onclick="ativarMonstro()">Ativar</button> ' +
         '<button onclick="desativarMonstro()">Desativar</button></p>' +
         '<p id="estado-monstro"></p>' +
-       // '<p id="estado-vigilante"></p>' + 
+        '<p id="estado-vigilante"></p>' + 
         '<p><button id="btn-matar" onclick="matarVigilante()" disabled>Pular na câmera do vigilante</button></p>';
 }
 
@@ -895,8 +895,9 @@ function desenharCamera(monstroAqui) {
             caixa.classList.add('alerta');
         } else {
             caixa.classList.remove('alerta');
+        }
+    }
 
-            
     // 5) Agora a tela já mostra o estado certo: o CSS pode revelar a imagem (evita o "pisca")
     document.body.classList.add('pronto');
 
@@ -905,8 +906,6 @@ function desenharCamera(monstroAqui) {
         tocarSom('monstro');
     } else {
         tocarSom('ambiente');
-    }
-        }
     }
 }
 
@@ -948,8 +947,8 @@ const ARQUIVOS_DE_SOM = {
 // Volume de cada som 
 const VOLUME_DOS_SONS = {
     espera:   0.5,
-    ambiente: 0.4,
-    monstro:  0.8
+    ambiente: 1,
+    monstro:  1,
 };
 
 const sonsCriados = {};          
